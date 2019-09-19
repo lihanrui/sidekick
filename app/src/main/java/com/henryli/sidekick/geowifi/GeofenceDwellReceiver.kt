@@ -8,7 +8,7 @@ import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.google.android.gms.location.Geofence
 import com.google.android.gms.location.GeofencingEvent
-import com.henryli.sidekick.AppConstants
+import com.henryli.sidekick.data.AppConstants
 import com.henryli.sidekick.R
 
 class GeofenceDwellReceiver : BroadcastReceiver() {
@@ -16,7 +16,10 @@ class GeofenceDwellReceiver : BroadcastReceiver() {
     val TAG = "Sidekick Geofence Broadcast"
 
     override fun onReceive(context: Context?, intent: Intent?) {
+        Log.e(TAG, "onReceive");
         val geofencingEvent = GeofencingEvent.fromIntent(intent)
+        createNotification(context!!, "Geofence get", "Let's get more")
+
 
         if (geofencingEvent.hasError()) {
 //            val errorMessage = GeofenceErrorMessages.getErrorString(this,

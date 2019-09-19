@@ -1,15 +1,143 @@
 package com.henryli.sidekick.geowifi
 
+import android.Manifest
+import android.app.Activity
+import android.content.Context
+import android.content.pm.PackageManager
+import android.location.Location
+import android.location.LocationManager
+import android.net.ConnectivityManager
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
+import com.google.android.gms.location.FusedLocationProviderClient
+import com.google.android.gms.location.Geofence
+import com.google.android.gms.location.LocationServices
+import com.henryli.sidekick.GeofenceUtils
+import com.henryli.sidekick.NotificationUtils
+import com.henryli.sidekick.data.WifiPoiData
 
 /*
- * 1. Create broadcast receiver to listen for network changes
- * 2. Detect initial state:
- * If no wifi enabled, create geofences and listen for when going to work / home
- * If wifi enabled but not connected to a network, prompt user to turn off wifi
- * 3. When wifi is turned off, broadcast receiver creates geofences and listen for when going to work / home
- * 4. When wifi is turned on, do nothing (user is in control)
+ if no wifi
+    check if home, at work etc.
+        if yes, ask for wifi on
+        if no, geofence and listen for going home,
+    if wifi
+    check if home, at work etc.
+        if yes, geofence and listen for leaving home, then ask for wifi back on
+        if no, ask for wifi off
  */
-class NetworkGeoController {
+class NetworkGeoController(appContext: Activity, notificationUtilsHandle: NotificationUtils) {
+    private val context: Activity = appContext
+    private val notificationUtils = notificationUtilsHandle
+    private val poiManager: WifiPoiManager = WifiPoiManager()
+    private val fusedLocationClient: FusedLocationProviderClient =
+        LocationServices.getFusedLocationProviderClient(context)
+    private val geofenceUtils  = GeofenceUtils(context)
+
+    val PERMISSION_REQUEST_ACCESS_FINE_LOCATION = 1359
+    /*
+    if no wifi
+    check if home, at work etc.
+        if yes, ask for wifi on
+        if no, geofence and listen for going home, then ask for wifi back on
+    if wifi
+    check if home, at work etc.
+        if yes, geofence and listen for leaving home, then ask for wifi back off
+        if no, ask for wifi off
+     */
+    fun analyzeWifiSituation() {
+        val here: Location = getCurrentLocation()
+        if (!isWifiOn()) {
+            if (poiManager.atWifiPoi(here)) {
+                // Ask for wifi on
+                notificationUtils.notify("Wifi off", "Poi on")
+            } else {
+                // create enter geofence
+                createGeofences(Geofence.GEOFENCE_TRANSITION_ENTER)
+                notificationUtils.notify("Wifi off", "Poi on")
+            }
+        } else {
+            if (poiManager.atWifiPoi(here)) {
+                // create exit geofence
+                notificationUtils.notify("Wifi on", "Poi on")
+
+                createGeofences(Geofence.GEOFENCE_TRANSITION_EXIT)
+            } else {
+                // ask for wifi off
+                notificationUtils.notify("Wifi on", "Poi off")
+            }
+        }
+    }
+
+    private fun getCurrentLocation(): Location {
+        if (ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            ActivityCompat.requestPermissions(
+                context,
+                arrayOf(Manifest.permission.ACCESS_FINE_LOCATION),
+                PERMISSION_REQUEST_ACCESS_FINE_LOCATION
+                // TODO: implement below code on result
+            )
+        } else {
+            val locManager: LocationManager =
+                context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            var loc: Location = locManager.getLastKnownLocation(LocationManager.GPS_PROVIDER)
+
+            if (loc == null) {
+                fusedLocationClient.lastLocation
+                    .addOnSuccessListener { location: Location? ->
+                        loc = location!!
+                    }
+            }
+            return loc
+        }
+        return Location("")
+    }
+
+    private fun isWifiOn(): Boolean {
+        val connManager =
+            context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager?
+        val mWifi = connManager!!.getNetworkInfo(ConnectivityManager.TYPE_WIFI)
+        return mWifi.isConnected
+    }
+
+    private fun createGeofences(type : Int){
+        val pois  = poiManager.getWifiHotspots()
+        geofenceUtils.createGeofences(pois, type)
+    }
+
+    internal class WifiPoiManager {
+        private val home: Location = Location(String()) // Provider string unnecessary
+        private val work: Location = Location(String())
+
+        init {
+            home.latitude = WifiPoiData.HOME_LATITUDE
+            home.longitude = WifiPoiData.HOME_LONGITUDE
+            work.latitude = WifiPoiData.WORK_LATITUDE
+            work.longitude = WifiPoiData.WORK_LONGITUDE
+        }
 
 
+        /**
+         * Function for getting list of locations where wifis exist
+         */
+        fun getWifiHotspots(): List<Location> {
+            val locs = ArrayList<Location>()
+            locs.add(home)
+            locs.add(work)
+            return locs
+        }
+
+        fun atWifiPoi(here: Location): Boolean {
+            val hotspots = getWifiHotspots()
+            for (wifi in hotspots) {
+                if (wifi.distanceTo(here) < 500) {
+                    return true
+                }
+            }
+            return false
+        }
+
+    }
 }
