@@ -25,6 +25,7 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
+
         <receiver android:name=".geowifi.WifiChangeReceiver">
             <intent-filter>
                 <action android:name="android.net.conn.CONNECTIVITY_CHANGE" />
@@ -32,11 +33,10 @@
             </intent-filter>
         </receiver>
 
-        <receiver android:name=".geowifi.GeofenceDwellReceiver">
-            <intent-filter>
-                <action android:name="com.example.GEOFENCE_TRANSITION" />
-            </intent-filter>
-        </receiver>
+        <receiver android:name=".geowifi.GeofenceDwellReceiver" />
+        <!--            <intent-filter>-->
+        <!--                <action android:name="com.example.GEOFENCE_TRANSITION" />-->
+        <!--            </intent-filter>-->
     </application>
 
 </manifest>

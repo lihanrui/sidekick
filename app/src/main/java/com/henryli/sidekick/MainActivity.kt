@@ -2,10 +2,8 @@ package com.henryli.sidekick
 
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
-import androidx.work.*
-import com.henryli.sidekick.geowifi.LocationWorker
 import com.henryli.sidekick.geowifi.NetworkGeoController
-import java.util.concurrent.TimeUnit
+import kotlinx.android.synthetic.main.activity_main.*
 
 class MainActivity : AppCompatActivity() {
     val REPEATINTERVAL = 15L
@@ -27,25 +25,10 @@ class MainActivity : AppCompatActivity() {
 
         wifiAnalyzer.analyzeWifiSituation()
 
-//        createLocationRepeatWork()
     }
 
-    private fun createLocationRepeatWork() {
-        val constraints = Constraints.Builder()
-            .setRequiresBatteryNotLow(true)
-            .build()
-
-        val uploadWorkRequest =
-            PeriodicWorkRequestBuilder<LocationWorker>(REPEATINTERVAL, TimeUnit.MINUTES)
-                .setBackoffCriteria(
-                    BackoffPolicy.LINEAR,
-                    OneTimeWorkRequest.DEFAULT_BACKOFF_DELAY_MILLIS,
-                    TimeUnit.MILLISECONDS
-                )
-                .setConstraints(constraints)
-                .build()
-        WorkManager.getInstance(this).enqueue(uploadWorkRequest)
+    fun updateLocation(str : String){
+        helloworld.text = str
     }
-
 
 }

@@ -4,12 +4,10 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
 import com.google.android.gms.location.Geofence
+import com.google.android.gms.location.GeofenceStatusCodes
 import com.google.android.gms.location.GeofencingEvent
-import com.henryli.sidekick.data.AppConstants
-import com.henryli.sidekick.R
+import com.henryli.sidekick.NotificationUtils
 
 class GeofenceDwellReceiver : BroadcastReceiver() {
 
@@ -18,56 +16,37 @@ class GeofenceDwellReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context?, intent: Intent?) {
         Log.e(TAG, "onReceive");
         val geofencingEvent = GeofencingEvent.fromIntent(intent)
-        createNotification(context!!, "Geofence get", "Let's get more")
-
 
         if (geofencingEvent.hasError()) {
-//            val errorMessage = GeofenceErrorMessages.getErrorString(this,
-//                geofencingEvent.errorCode)
-//            Log.e(TAG, errorMessage)
+            NotificationUtils(context!!).notify(
+                "Geofence error",
+                getErrorString(geofencingEvent.errorCode)
+            )
             return
         }
 
         // Get the transition type.
-        val geofenceTransition: Int = geofencingEvent.geofenceTransition
+        val transitionType: Int = geofencingEvent.geofenceTransition
 
         // Test that the reported transition was a dwell transition.
-        if (geofenceTransition == Geofence.GEOFENCE_TRANSITION_DWELL) {
-            // Get the geofences that were triggered. A single event can trigger
-            // multiple geofences.
-            val triggeringGeofences: List<Geofence> = geofencingEvent.triggeringGeofences
+        // Get the geofences that were triggered. A single event can trigger
+        // multiple geofences.
+        val triggeringGeofences: List<Geofence> = geofencingEvent.triggeringGeofences
 
-            val geofenceTransitionDetails =
-                getTransitionDetails(geofenceTransition, triggeringGeofences)
-            // Send notification and log the transition details.
-            createNotification(context!!, "Geofence title", geofenceTransitionDetails)
+        val geofenceTransitionDetails =
+            getTransitionDetails(transitionType, triggeringGeofences)
+        // Send notification and log the transition details.
+        NotificationUtils(context!!).notify(
+            getString(transitionType),
+            geofenceTransitionDetails
+        )
 
-            Log.e(TAG, geofenceTransitionDetails)
-        } else {
-            // Log the error.
-            Log.e(
-                TAG,
-                getString(context!!, R.string.geofence_transition_invalid_type, geofenceTransition)
-            )
-        }
+        Log.e(TAG, geofenceTransitionDetails)
     }
 
-    fun createNotification(context: Context, title: String, description: String) {
-        var notification = NotificationCompat.Builder(context, AppConstants.CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_launcher_background)
-            .setContentTitle(title)
-            .setContentText(description)
-//            .setStyle(NotificationCompat.BigPictureStyle()
-//                .bigPicture(myBitmap))
-            .build()
-        with(NotificationManagerCompat.from(context)) {
-            // notificationId is a unique int for each notification that you must define
-            notify(AppConstants.NOTIFICATION_ID, notification)
-        }
-    }
 
-    private fun getString(context: Context, resid: Int, transition: Int): String {
-        val sb = StringBuffer(context.getString(resid))
+    private fun getString(transition: Int): String {
+        val sb = StringBuffer()
         when (transition) {
             Geofence.GEOFENCE_TRANSITION_DWELL -> sb.append("Dwelling")
             Geofence.GEOFENCE_TRANSITION_ENTER -> sb.append("Entered")
@@ -79,15 +58,31 @@ class GeofenceDwellReceiver : BroadcastReceiver() {
     private fun getTransitionDetails(transition: Int, fences: List<Geofence>): String {
         val sb = StringBuffer()
         when (transition) {
-            Geofence.GEOFENCE_TRANSITION_DWELL -> sb.append("Dwelling")
+            Geofence.GEOFENCE_TRANSITION_EXIT -> sb.append("Turn off wifi, exited: ")
+            Geofence.GEOFENCE_TRANSITION_ENTER -> sb.append("Turn on wifi, entered: ")
         }
         for (fence: Geofence in fences) {
-            sb.append('-')
             sb.append(fence.requestId)
-            sb.append(' ')
         }
         return sb.toString()
 
+    }
+
+    fun getErrorString(code: Int): String {
+        when (code) {
+            GeofenceStatusCodes.GEOFENCE_NOT_AVAILABLE -> {
+                return "Geofence service is not available now. Typically because user turned off location access."
+            }
+            GeofenceStatusCodes.GEOFENCE_TOO_MANY_GEOFENCES -> {
+                return "Your app has registered over 100 geofences! Too many."
+            }
+            GeofenceStatusCodes.GEOFENCE_TOO_MANY_PENDING_INTENTS -> {
+                return "App has provided more than 5 PendingIntents to addGeofences call. See GeofenceStatusCodes error codes for more info."
+            }
+            else -> {
+                return "Unknown code"
+            }
+        }
     }
 
 }
