@@ -9,7 +9,7 @@ import com.google.android.gms.location.GeofencingClient
 import com.google.android.gms.location.GeofencingRequest
 import com.google.android.gms.location.LocationServices
 import com.henryli.sidekick.data.WifiPoiData
-import com.henryli.sidekick.geowifi.GeofenceDwellReceiver
+import com.henryli.sidekick.geowifi.GeofenceTransitionReceiver
 
 class GeofenceUtils(appContext: Context) {
     private var context: Context = appContext
@@ -17,7 +17,7 @@ class GeofenceUtils(appContext: Context) {
     private var geofenceClient: GeofencingClient = LocationServices.getGeofencingClient(context)
 
     private val geofencePendingIntent: PendingIntent by lazy {
-        val intent = Intent(context, GeofenceDwellReceiver::class.java)
+        val intent = Intent(context, GeofenceTransitionReceiver::class.java)
         // We use FLAG_UPDATE_CURRENT so that we get the same pending intent back when calling
         // addGeofences() and removeGeofences()
         PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT)

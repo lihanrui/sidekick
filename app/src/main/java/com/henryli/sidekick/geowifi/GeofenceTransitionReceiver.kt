@@ -9,9 +9,12 @@ import com.google.android.gms.location.GeofenceStatusCodes
 import com.google.android.gms.location.GeofencingEvent
 import com.henryli.sidekick.NotificationUtils
 
-class GeofenceDwellReceiver : BroadcastReceiver() {
+class GeofenceTransitionReceiver : BroadcastReceiver() {
 
     val TAG = "Sidekick Geofence Broadcast"
+    companion object {
+        val GEOFENCE_NOTIFICATION_ID = 31
+    }
 
     override fun onReceive(context: Context?, intent: Intent?) {
         Log.e(TAG, "onReceive");
@@ -20,7 +23,8 @@ class GeofenceDwellReceiver : BroadcastReceiver() {
         if (geofencingEvent.hasError()) {
             NotificationUtils(context!!).notify(
                 "Geofence error",
-                getErrorString(geofencingEvent.errorCode)
+                getErrorString(geofencingEvent.errorCode),
+                GEOFENCE_NOTIFICATION_ID
             )
             return
         }
@@ -33,17 +37,32 @@ class GeofenceDwellReceiver : BroadcastReceiver() {
         // multiple geofences.
         val triggeringGeofences: List<Geofence> = geofencingEvent.triggeringGeofences
 
-        val geofenceTransitionDetails =
-            getTransitionDetails(transitionType, triggeringGeofences)
-        // Send notification and log the transition details.
-        NotificationUtils(context!!).notify(
-            getString(transitionType),
-            geofenceTransitionDetails
-        )
+        // Delegate to the NetworkGeoController to figure out what is going on
+        val networkGeoController = NetworkGeoController(context!!, NotificationUtils(context!!))
+        networkGeoController.analyzeWifiSituation()
 
-        Log.e(TAG, geofenceTransitionDetails)
+//        when (transitionType) {
+////            Geofence.GEOFENCE_TRANSITION_DWELL -> sb.append("Dwelling") // Unclear
+//            Geofence.GEOFENCE_TRANSITION_ENTER -> {
+//                if()
+//            }// if wifi on, clear notification. if wifi off, notify.
+//            Geofence.GEOFENCE_TRANSITION_EXIT ->{
+//
+//            } // if wifi on, notify. if wifi off, clear notification.
+//        }
+
+
+//        val geofenceTransitionDetails =
+//            getTransitionDetails(transitionType, triggeringGeofences)
+//        // Send notification and log the transition details.
+//        NotificationUtils(context!!).notify(
+//            getString(transitionType),
+//            geofenceTransitionDetails,
+//            GEOFENCE_NOTIFICATION_ID
+//        )
+//
+//        Log.e(TAG, geofenceTransitionDetails)
     }
-
 
     private fun getString(transition: Int): String {
         val sb = StringBuffer()
@@ -84,5 +103,4 @@ class GeofenceDwellReceiver : BroadcastReceiver() {
             }
         }
     }
-
 }

@@ -12,10 +12,11 @@ class NotificationUtils(mContext: Context) {
     private val context = mContext
 
     private val PRIMARY_CHANNEL_ID = "geofence_notification_channel"
-    private val NOTIFICATION_ID = 31
 
     private var mNotifyManager =
         context.getSystemService(NOTIFICATION_SERVICE) as NotificationManager?
+
+    val listIds = ArrayList<Int>()
 
     init {
         createNotificationChannel()
@@ -35,9 +36,10 @@ class NotificationUtils(mContext: Context) {
         }
     }
 
-    fun notify(title: String, text: String) {
+    fun notify(title: String, text: String, notificationId : Int) {
         val notifyBuilder = getNotificationBuilder(title, text)
-        mNotifyManager?.notify(NOTIFICATION_ID, notifyBuilder.build())
+        mNotifyManager?.notify(notificationId, notifyBuilder.build())
+        listIds.add(notificationId)
     }
 
     private fun getNotificationBuilder(title: String, text: String): NotificationCompat.Builder {
@@ -46,5 +48,15 @@ class NotificationUtils(mContext: Context) {
             .setContentText(text)
             .setSmallIcon(R.drawable.geoicon);
         return notifyBuilder
+    }
+
+    fun deleteNotification(id : Int){
+        mNotifyManager?.cancel(id)
+    }
+
+    fun deleteAllNotifications(){
+        for (id in listIds){
+            mNotifyManager?.cancel(id)
+        }
     }
 }
